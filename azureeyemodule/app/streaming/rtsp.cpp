@@ -299,6 +299,10 @@ static void need_data_callback(GstElement *appsrc, guint unused, StreamParameter
     // Push the RGB frame into the pipeline
     GstFlowReturn ret;
     g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
+    if (ret != GST_FLOW_OK)
+    {
+        util::log_error("Got an unexpected return value from pushing the raw or result frame to Gstreamer pipeline: " + std::to_string(ret));
+    }
 
     // Clean up after ourselves
     gst_buffer_unref(buffer);
@@ -342,6 +346,9 @@ static void need_data_callback_h264(GstElement *appsrc, guint unused, StreamPara
     {
         util::log_error("Got an unexpected return value from pushing the h.264 frame to Gstreamer pipeline: " + std::to_string(ret));
     }
+
+    // Clean up the buffer
+    gst_buffer_unref(buffer);
 
     // If we have any more frames behind this one, let's pop this one.
     // Otherwise, let's keep sending this one until we get another.
