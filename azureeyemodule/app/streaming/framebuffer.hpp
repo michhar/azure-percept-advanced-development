@@ -8,6 +8,7 @@
 #include <thread>
 
 // Local includes
+#include "frame.hpp"
 #include "resolution.hpp"
 #include "../util/circular_buffer.hpp"
 
@@ -65,7 +66,7 @@ public:
     explicit FrameBuffer(size_t max_length, int fps);
 
     /** Destructor. */
-    ~FrameBuffer();
+    virtual ~FrameBuffer();
 
     /**
      * We return the current frame.
@@ -73,20 +74,20 @@ public:
      * This may block up to as long as it takes for the internal FPS updating thread to update
      * the frame, which should be quite quick.
      */
-    cv::Mat get(const Resolution &resolution);
+    Frame get(const Resolution &resolution);
 
     /** Put a new frame into the buffer. */
-    void put(const cv::Mat &frame);
+    void put(const Frame &frame);
 
     /** Get the number of frames we still have room for before we start overwriting old ones. */
     size_t room() const;
 
 private:
     /** The internal container we use for holding the frames. */
-    circbuf::CircularBuffer<cv::Mat> circular_buffer;
+    circbuf::CircularBuffer<Frame> circular_buffer;
 
     /** This is the latest frame that we have sent (or a default if we haven't sent any yet). */
-    cv::Mat cached_frame;
+    Frame cached_frame;
 
     /** Lock to guard access to the cached frame, which gets read from whatever thread, and written from our internal thread. */
     std::mutex cached_frame_mutex;

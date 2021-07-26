@@ -4,6 +4,7 @@
 
 // Local includes
 #include "resolution.hpp"
+#include "h264.hpp"
 
 // Standard library includes
 #include <string>
@@ -21,15 +22,6 @@ enum class StreamType {
    RESULT,     // Raw images overlaid by whatever markups the network parser code has done
    H264_RAW,   // Raw images from the camera, encoded using H.264
 };
-
-/** A struct to represent an H264 frame. */
-typedef struct {
-   /** The actual data in the frame. */
-   std::vector<uint8_t> data;
-
-   /** The timestamp for this frame. */
-   int64_t timestamp;
-} H264;
 
 /** Returns the current resolution of all the streams of the given type. */
 Resolution get_resolution(const StreamType &type);

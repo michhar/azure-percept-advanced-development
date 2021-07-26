@@ -176,7 +176,7 @@ FrameBuffer raw_buffer(QUEUE_SIZE, DEFAULT_FPS);
 FrameBuffer result_buffer(QUEUE_SIZE, DEFAULT_FPS);
 
 /** This is the H.264 frame we feed out whenever we need more for the H.264 stream. Resolution is taken care of by the AI model. */
-static std::queue<H264> h264_buffer;
+FrameBuffer h264_buffer(QUEUE_SIZE, DEFAULT_FPS);
 
 
 /** Tell Gstreamer to read the media clock and use it as-is as the NTP timestamp. */
@@ -266,19 +266,19 @@ static cv::Mat get_frame(const std::string &stream_name)
 {
     if (stream_name == rtsp_raw_udp_source_name)
     {
-        return raw_buffer.get(raw_udp_context.resolution);
+        return raw_buffer.get(raw_udp_context.resolution).ocv();
     }
     else if (stream_name == rtsp_raw_tcp_source_name)
     {
-        return raw_buffer.get(raw_tcp_context.resolution);
+        return raw_buffer.get(raw_tcp_context.resolution).ocv();
     }
     else if (stream_name == rtsp_result_udp_source_name)
     {
-        return result_buffer.get(result_udp_context.resolution);
+        return result_buffer.get(result_udp_context.resolution).ocv();
     }
     else
     {
-        return result_buffer.get(result_tcp_context.resolution);
+        return result_buffer.get(result_tcp_context.resolution).ocv();
     }
 }
 
@@ -312,7 +312,7 @@ static void need_data_callback(GstElement *appsrc, guint unused, StreamParameter
 static void need_data_callback_h264(GstElement *appsrc, guint unused, StreamParametersH264 *params)
 {
     // Turn our H.264 frame into a Gstreamer buffer
-    H264 frame = h264_buffer.front();
+    H264 frame = h264_buffer.get(h264_context.resolution).h264();
     guint size = frame.data.size();
     GstBuffer *buffer = gst_buffer_new_allocate(NULL, size, NULL);
     gst_buffer_fill(buffer, 0, frame.data.data(), size);
@@ -349,13 +349,6 @@ static void need_data_callback_h264(GstElement *appsrc, guint unused, StreamPara
 
     // Clean up the buffer
     gst_buffer_unref(buffer);
-
-    // If we have any more frames behind this one, let's pop this one.
-    // Otherwise, let's keep sending this one until we get another.
-    if (h264_buffer.size() > 1)
-    {
-        h264_buffer.pop();
-    }
 }
 
 /** Called when a new media pipeline is constructed. As such, operates in callback context. Make sure it is re-entrant! */
@@ -636,7 +629,7 @@ static void add_bunch_of_frames(const std::vector<cv::Mat> &mats, FrameBuffer &b
         {
             if ((i % n) == 0)
             {
-                buffer.put(mats.at(i));
+                buffer.put(Frame(mats.at(i)));
                 taken++;
             }
 
@@ -678,14 +671,7 @@ void update_data_result(const std::vector<cv::Mat> &mats)
 
 void update_data_h264(const H264 &frame)
 {
-    // Make sure we don't leak memory or get super far behind on the frames
-    // if we are consuming them slower than we are producing them.
-    while (h264_buffer.size() > (size_t)(2 * h264_context.fps))
-    {
-        h264_buffer.pop();
-    }
-
-    h264_buffer.push(frame);
+    h264_buffer.put(Frame(frame));
 }
 
 void set_stream_params(const StreamType &type, bool enable)

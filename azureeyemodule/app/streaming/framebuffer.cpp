@@ -6,6 +6,7 @@
 #include <thread>
 
 // Local includes
+#include "frame.hpp"
 #include "framebuffer.hpp"
 #include "resolution.hpp"
 #include "../util/circular_buffer.hpp"
@@ -18,7 +19,7 @@
 namespace rtsp {
 
 FrameBuffer::FrameBuffer(size_t max_length, int fps)
-    : circular_buffer(max_length), cached_frame(DEFAULT_HEIGHT, DEFAULT_WIDTH, CV_8UC3, cv::Scalar(0, 0, 0)),
+    : circular_buffer(max_length), cached_frame(Frame(false)),
       fps(fps), fps_thread( std::thread([this]{this->periodically_update_frame();}) )
 {
 }
@@ -32,17 +33,17 @@ FrameBuffer::~FrameBuffer()
     this->fps_thread.join();
 }
 
-cv::Mat FrameBuffer::get(const Resolution &resolution)
+Frame FrameBuffer::get(const Resolution &resolution)
 {
     // Readers may have to wait for the fps_update thread to update the latest frame,
     // but that shouldn't take long.
 
-    cv::Mat ret;
+    Frame ret(false);
 
     // Take the mutex in order to read the cached frame (which may
     // be in the middle of being updated by the FPS thread)
     this->cached_frame_mutex.lock();
-    this->cached_frame.copyTo(ret);
+    ret = this->cached_frame;
     this->cached_frame_mutex.unlock();
 
     // Determine the resolution the caller wants
@@ -51,19 +52,27 @@ cv::Mat FrameBuffer::get(const Resolution &resolution)
     std::tie(desired_height, desired_width) = get_height_and_width(resolution);
 
     // What resolution is the image that we got?
-    int ret_height = ret.size().height;
-    int ret_width = ret.size().width;
-
-    // If not the right resolution, we should update.
-    if ((ret_height != desired_height) || (ret_width != desired_width))
+    if (!ret.ish264())
     {
-        cv::resize(ret, ret, cv::Size(desired_width, desired_height));
+        cv::Mat cvret;
+        ret.ocv().copyTo(cvret);
+
+        int ret_height = cvret.size().height;
+        int ret_width = cvret.size().width;
+
+        // If not the right resolution, we should update.
+        if ((ret_height != desired_height) || (ret_width != desired_width))
+        {
+            cv::resize(cvret, cvret, cv::Size(desired_width, desired_height));
+        }
+
+        ret = Frame(cvret);
     }
 
     return ret;
 }
 
-void FrameBuffer::put(const cv::Mat &frame)
+void FrameBuffer::put(const Frame &frame)
 {
     // Writers block until they put a frame into the buffer, but nobody actually blocks reading
     // from the buffer in this design, so we should always succeed without waiting.
@@ -79,7 +88,7 @@ void FrameBuffer::periodically_update_frame()
         // or it might be in the middle of a put(). Either way, we don't have
         // time to wait on this thread, as we may be running at a high FPS.
         // We'll just catch it again next time.
-        cv::Mat frame;
+        Frame frame;
         bool got = this->circular_buffer.get_no_wait(frame);
 
         // We do need to grab the cached_frame lock though.
