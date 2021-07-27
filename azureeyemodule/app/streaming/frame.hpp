@@ -17,8 +17,6 @@ namespace rtsp {
 
 /** The underlying data in a Frame object can be either an OpenCV Mat buffer or an H264 struct. */
 union FrameData {
-    cv::Mat ocv;
-    H264 h264;
 };
 
 /** A Frame represents ah H.264 frame or an OpenCV Frame object. */
@@ -36,6 +34,12 @@ public:
     /** Constructor for a Frame object taht is an H.264 frame under the hood. */
     Frame(const H264 &h);
 
+    /** Copy constructor. */
+    Frame(const Frame &other);
+
+    /** Destructor. */
+    ~Frame();
+
     /** Clone this object (deep copy). */
     Frame clone() const;
 
@@ -50,10 +54,14 @@ public:
 
 private:
     /** Is this frame an H.264 frame? */
-    const bool is_this_h264;
+    const bool is_h264;
 
     /** The data. */
-    FrameData data;
+    union {
+        cv::Mat ocvdata;
+        H264 h264data;
+    };
+
 };
 
 } // namespace rtsp

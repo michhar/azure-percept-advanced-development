@@ -460,10 +460,7 @@ void AzureEyeModel::handle_h264_output(cv::optional<std::vector<uint8_t>> &out_h
         ofs.write(reinterpret_cast<const char*>(out_h264->data()), out_h264->size());
     }
 
-    rtsp::H264 frame;
-    frame.data = *out_h264;
-    frame.timestamp = *out_h264_ts;
-
+    rtsp::H264 frame(*out_h264, *out_h264_ts);
     rtsp::update_data_h264(frame);
 }
 

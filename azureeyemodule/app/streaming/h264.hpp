@@ -10,12 +10,14 @@
 namespace rtsp {
 
 /** A struct to represent an H264 frame. */
-typedef struct {
+struct H264 {
    /** The actual data in the frame. */
    std::vector<uint8_t> data;
 
    /** The timestamp for this frame. */
    int64_t timestamp;
-} H264;
+
+   H264(const std::vector<uint8_t> &vec, int64_t ts) : data(vec), timestamp(ts) {};
+};
 
 } // namespace rtsp

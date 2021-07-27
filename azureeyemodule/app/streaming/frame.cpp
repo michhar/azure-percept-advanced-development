@@ -19,33 +19,78 @@ namespace rtsp {
     }
 
     Frame::Frame(bool ish264)
-        : is_this_h264(ish264), data(cv::Mat())
+        : is_h264(ish264)
     {
         if (ish264)
         {
-            this->data = {H264(std::vector<uint8_t>{}, (int64_t)std::time(nullptr))};
+            this->h264data = H264(std::vector<uint8_t>{}, (int64_t)std::time(nullptr));
         }
         else
         {
-            this->data = {cv::Mat(DEFAULT_HEIGHT, DEFAULT_WIDTH, CV_8UC3, cv::Scalar(0, 0, 0))};
+            this->ocvdata = cv::Mat(DEFAULT_HEIGHT, DEFAULT_WIDTH, CV_8UC3, cv::Scalar(0, 0, 0));
         }
     }
 
     Frame::Frame(const cv::Mat &mat)
-        : is_this_h264(false)
+        : is_h264(false)
     {
-        // TODO
+        this->ocvdata = mat.clone();
     }
 
     Frame::Frame(const H264 &h)
-        : is_this_h264(true)
+        : is_h264(true)
     {
-        // TODO
+        this->h264data = h;
+    }
+
+    Frame::Frame(const Frame &other)
+        : is_h264(other.is_h264)
+    {
+        if (other.is_h264)
+        {
+            this->h264data = other.h264();
+        }
+        else
+        {
+            this->ocvdata = other.ocv();
+        }
+    }
+
+    Frame::~Frame()
+    {
+        // Nothing to do
     }
 
     bool Frame::ish264() const
     {
-        return this->is_this_h264;
+        return this->is_h264;
+    }
+
+    Frame Frame::clone() const
+    {
+        if (this->is_h264)
+        {
+            return std::move(Frame(this->h264data));
+        }
+        else
+        {
+            return std::move(Frame(this->ocvdata.clone()));
+        }
+    }
+
+    bool Frame::ish264() const
+    {
+        return this->is_h264;
+    }
+
+    cv::Mat Frame::ocv() const
+    {
+        return this->ocvdata;
+    }
+
+    H264 Frame::h264() const
+    {
+        return this->h264data;
     }
 
 } // namespace rtsp
