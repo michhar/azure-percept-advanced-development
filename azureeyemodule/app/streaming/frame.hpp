@@ -40,6 +40,9 @@ public:
     /** Destructor. */
     ~Frame();
 
+    /** Assignment operator overload to deal with union. */
+    Frame& operator=(const Frame &rhs);
+
     /** Clone this object (deep copy). */
     Frame clone() const;
 
@@ -54,7 +57,7 @@ public:
 
 private:
     /** Is this frame an H.264 frame? */
-    const bool is_h264;
+    bool is_h264;
 
     /** The data. */
     union {

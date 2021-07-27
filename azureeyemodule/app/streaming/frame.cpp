@@ -61,9 +61,22 @@ namespace rtsp {
         // Nothing to do
     }
 
-    bool Frame::ish264() const
+    Frame& Frame::operator=(const Frame &rhs)
     {
-        return this->is_h264;
+        if (this != &rhs)
+        {
+            this->is_h264 = rhs.is_h264;
+            if (this->is_h264)
+            {
+                this->h264data = rhs.h264data;
+            }
+            else
+            {
+                this->ocvdata = rhs.ocvdata;
+            }
+        }
+
+        return *this;
     }
 
     Frame Frame::clone() const
