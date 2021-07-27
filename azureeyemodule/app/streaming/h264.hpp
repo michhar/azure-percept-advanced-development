@@ -17,6 +17,7 @@ struct H264 {
    /** The timestamp for this frame. */
    int64_t timestamp;
 
+   H264() : data({}), timestamp(0) {};
    H264(const std::vector<uint8_t> &vec, int64_t ts) : data(vec), timestamp(ts) {};
 };
 
